@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultor ODS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+    <style>
+        :root {
+            --ods-blue: #00558b;
+            --ods-green: #3f7e44;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--ods-blue);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+
+        .assistant-message {
+            background-color: #f1f8e9;
+            margin-right: 20%;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        textarea {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+            min-height: 50px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--ods-green);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2d5a30;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .ods-icons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .ods-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--ods-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Consultor de Objetivos de Desenvolvimento Sustentável</h1>
+        
+        <div class="ods-icons">
+            <div class="ods-icon">ODS 1</div>
+            <div class="ods-icon">ODS 2</div>
+            <div class="ods-icon">ODS 3</div>
+            <div class="ods-icon">ODS 4</div>
+            <div class="ods-icon">ODS 5</div>
+            <div class="ods-icon">ODS 6</div>
+            <div class="ods-icon">ODS 7</div>
+            <div class="ods-icon">ODS 8</div>
+            <div class="ods-icon">ODS 9</div>
+        </div>
+
+        <div class="chat-container" id="chatContainer"></div>
+        
+        <div class="input-container">
+            <textarea id="userInput" placeholder="Digite sua mensagem aqui..."></textarea>
+            <button onclick="sendMessage()" id="sendButton">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = '5f74eb8579e44d3db55d9548a13d7eb1';
+        const API_URL = 'https://alexa-m20y9agv-francecentral.openai.azure.com/openai/deployments/gpt-35-turboGracio/chat/completions?api-version=2023-03-15-preview';
+
+        let conversationHistory = [];
+
+        async function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+            const chatContainer = document.getElementById('chatContainer');
+
+            if (!userInput.value.trim()) return;
+
+            // Disable input and button while processing
+            userInput.disabled = true;
+            sendButton.disabled = true;
+
+            // Add user message to chat
+            const userMessage = userInput.value;
+            addMessageToChat('user', userMessage);
+
+            // Add to conversation history
+            conversationHistory.push({
+                role: "user",
+                content: userMessage
+            });
+
+            try {
+                const response = await axios.post(API_URL, {
+                    messages: [
+                        {
+                            role: "system",
+                            content: "Você é um especialista nas ODS. Você deve oferecer projetos de desenvolvimento sustentável baseados nas ODS. Você deve informar a ODS no qual o projeto se baseia."
+                        },
+                        ...conversationHistory
+                    ],
+                    max_tokens: 800,
+                    temperature: 0.7,
+                    top_p: 0.95
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': API_KEY
+                    }
+                });
+
+                const assistantMessage = response.data.choices[0].message.content;
+                addMessageToChat('assistant', assistantMessage);
+
+                // Add to conversation history
+                conversationHistory.push({
+                    role: "assistant",
+                    content: assistantMessage
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                addMessageToChat('assistant', 'Desculpe, ocorreu um erro ao processar sua mensagem.');
+            }
+
+            // Re-enable input and button
+            userInput.value = '';
+            userInput.disabled = false;
+            sendButton.disabled = false;
+        }
+
+        function addMessageToChat(role, content) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', `${role}-message`);
+            messageDiv.textContent = content;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Allow sending message with Enter key (Shift+Enter for new line)
+        document.getElementById('userInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
